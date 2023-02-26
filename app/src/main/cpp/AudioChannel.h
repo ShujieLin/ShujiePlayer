@@ -1,0 +1,5 @@
+class AudioChannel
+{
+public:
+    AudioChannel();
+};
