@@ -1,3 +1,6 @@
+#ifndef SHUJIEPLAYER_JNICALLBACKHELPER_H
+#define SHUJIEPLAYER_JNICALLBACKHELPER_H
+
 #include <jni.h>
 #include "util.h"
 
@@ -17,3 +20,4 @@ public:
 
     void onError(int thread_mode, int error_code);
 };
+#endif

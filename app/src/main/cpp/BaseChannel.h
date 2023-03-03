@@ -1,3 +1,6 @@
+#ifndef BASE_CHANNEL_H
+#define BASE_CHANNEL_H
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 }

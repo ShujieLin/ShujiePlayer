@@ -36,8 +36,8 @@ public class MainActivity extends AppCompatActivity {
 
         requestPermisson();
 
-        player = new Player();
-        player.setDataSource(new File(Environment.getExternalStorageDirectory() + File.separator + "demo.mp4").getAbsolutePath());
+        player = new Player();//  /storage/emulated/0/demo.mp4
+        player.setDataSource(new File(Environment.getExternalStorageDirectory()  + File.separator + "demo.mp4").getAbsolutePath());
         Log.d(TAG, "onCreate: Environment.getExternalStorageDirectory() = " + Environment.getExternalStorageDirectory());
 
         player.setOnpreparedListener(new Player.OnPreparedListener() {

@@ -1,3 +1,6 @@
+#ifndef SAFE_QUEUE_H
+#define SAFE_QUEUE_H
+
 #include <queue>
 #include <pthread.h>
 
@@ -124,3 +127,5 @@ public:
         this->releaseCallback = releaseCallback;
     }
 };
+
+#endif

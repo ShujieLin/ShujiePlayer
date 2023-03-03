@@ -1,3 +1,5 @@
+#ifndef VIDEO_CHANNEL_H
+#define VIDEO_CHANNEL_H
 
 #include "BaseChannel.h"
 
@@ -28,3 +30,5 @@ public:
 
     void setRenderCallback(RenderCallback renderCallback);
 };
+
+#endif

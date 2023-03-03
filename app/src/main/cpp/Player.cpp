@@ -15,7 +15,7 @@ Player::~Player() {
         delete data_source;
         data_source = 0;
     }
-    if (callbackHelper){
+    if (callbackHelper) {
         delete callbackHelper;
         callbackHelper = 0;
     }
@@ -28,10 +28,16 @@ void *task_prepare(void *args) {
     return 0;//必须返回
 }
 
+void *task_start(void *args) {
+    auto *player = static_cast<Player *>(args);
+    player->start_();
+    return 0; // 必须返回，坑，错误很难找
+}
+
 void Player::prepare_() {
     formatContext = avformat_alloc_context();
-    AVDictionary  * dictionary = 0;
-    av_dict_set(&dictionary,"timeout","5000000",0);
+    AVDictionary *dictionary = 0;
+    av_dict_set(&dictionary, "timeout", "5000000", 0);
 
     /**
      * 1
@@ -39,21 +45,21 @@ void Player::prepare_() {
      * 3.mac windows 摄像头 麦克风
      *
      */
-    int r = avformat_open_input(&formatContext,data_source,0,&dictionary);
+    int r = avformat_open_input(&formatContext, data_source, 0, &dictionary);
     //释放
     av_dict_free(&dictionary);
-    if (r){
+    if (r) {
         //jni反射回调给java方法，并提示
-        if (callbackHelper){
+        if (callbackHelper) {
             callbackHelper->onError(THREAD_CHILD, FFMPEG_CAN_NOT_OPEN_URL);
         }
         return;
     }
 
-    r = avformat_find_stream_info(formatContext,0);
-    if (r < 0){
+    r = avformat_find_stream_info(formatContext, 0);
+    if (r < 0) {
         //jni反射回调给java方法，并提示
-        if (callbackHelper){
+        if (callbackHelper) {
             callbackHelper->onError(THREAD_CHILD, FFMPEG_CAN_NOT_FIND_STREAMS);
         }
         return;
@@ -62,7 +68,7 @@ void Player::prepare_() {
     //获取流的数量
     for (int i = 0; i < formatContext->nb_streams; ++i) {
         //获取媒体流，视频/音频
-        AVStream  *stream = formatContext->streams[i];
+        AVStream *stream = formatContext->streams[i];
         //获取编码的参数
         AVCodecParameters *parameters = stream->codecpar;
 
@@ -71,46 +77,47 @@ void Player::prepare_() {
 
         //编解码器 上下文
         AVCodecContext *codecContext = avcodec_alloc_context3(codec);
-        if (!codecContext){
+        if (!codecContext) {
             //jni反射回调给java方法，并提示
-            if (callbackHelper){
+            if (callbackHelper) {
                 callbackHelper->onError(THREAD_CHILD, FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
             }
             return;
         }
 
         //赋值给上下文
-        r = avcodec_parameters_to_context(codecContext,parameters);
-        if (r<0){
+        r = avcodec_parameters_to_context(codecContext, parameters);
+        if (r < 0) {
             //jni反射回调给java方法，并提示
-            if (callbackHelper){
+            if (callbackHelper) {
                 callbackHelper->onError(THREAD_CHILD, FFMPEG_CODEC_CONTEXT_PARAMETERS_FAIL);
             }
             return;
         }
 
         //打开解码器
-        r = avcodec_open2(codecContext,codec,0);
-        if (r){
+        r = avcodec_open2(codecContext, codec, 0);
+        if (r) {
             //jni反射回调给java方法，并提示
-            if (callbackHelper){
+            if (callbackHelper) {
                 callbackHelper->onError(THREAD_CHILD, FFMPEG_OPEN_DECODER_FAIL);
             }
             return;
         }
 
         //从编解码器中获取流的类型
-        if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO){
-            audio_channel = new AudioChannel();
-        } else if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO){
-            video_channel = new VideoChannel();
+        if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO) {
+            audio_channel = new AudioChannel(0, nullptr);
+        } else if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
+            video_channel = new VideoChannel(i, codecContext);
+            video_channel->setRenderCallback(renderCallback);
         }
     }//for end
 
     //假如没有音频和视频流
     if (!audio_channel && !video_channel) {
         //JNI 反射回调到Java方法，并提示
-        if (callbackHelper){
+        if (callbackHelper) {
             callbackHelper->onError(THREAD_CHILD, FFMPEG_CAN_NOT_OPEN_URL);
         }
         return;
@@ -139,9 +146,38 @@ void Player::start() {
     if (video_channel) {
         video_channel->start();
     }
+
+    // 创建子线程 把 音频和视频 压缩包 加入队列里面去
+    pthread_create(&pid_start, 0, task_start, this);
 }
 
+// 把 视频 音频 的压缩包(AVPacket *) 循环获取出来 加入到队列里面去
 void Player::start_() {
+    while (isPlaying) {
+        // AVPacket 可能是音频 也可能是视频（压缩包）
+        AVPacket *packet = av_packet_alloc();
+        int ret = av_read_frame(formatContext, packet);
+        if (ret == 0) {
+            if (video_channel && video_channel->stream_index == packet->stream_index) {
+                video_channel->packets.insertToQueue(packet);
+            } else if (audio_channel && audio_channel->stream_index == packet->stream_index) {
+                //代表是音频
+            }
 
+
+        } else if (ret == AVERROR_EOF) {
+            // TODO 表示读完了，要考虑释放播放完成，表示读完了 并不代表播放完毕
+        } else {
+            break;
+        }
+    }
+    isPlaying = 0;
+    video_channel->stop();
+    audio_channel->stop();
 }
+
+void Player::setRenderCallback(RenderCallback renderCallback) {
+    this->renderCallback = renderCallback;
+}
+
 
