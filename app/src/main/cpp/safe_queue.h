@@ -75,8 +75,9 @@ public:
         return ret;
     }
 
-    // Activity onDestroy  ----> setWork(0);  pthread_cond_signal
+
     /**
+     * Activity onDestroy  ----> 需要setWork(0);假如在block状态会引发内存泄漏。  pthread_cond_signal
     * 设置工作状态，设置队列是否工作
     * @param work
     */

@@ -8,7 +8,7 @@
 
     <TextView
         android:id="@+id/tv_state"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="-"
         android:textSize="20dp"
@@ -23,8 +23,6 @@
         android:layout_width="match_parent"
         android:layout_height="200dp" />
 
-    <!-- 第五节课 第六节课 完成拖动条功能 -->
-    <!-- 进度条功能，后面看，现在先不管哈 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
