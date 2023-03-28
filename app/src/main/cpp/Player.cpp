@@ -122,7 +122,7 @@ void Player::prepare_() {
             audio_channel = new AudioChannel(i, codecContext);
         } else if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
             video_channel = new VideoChannel(i, codecContext);
-//            video_channel->setRenderCallback(renderCallback);
+            video_channel->setRenderCallback(renderCallback);
         }
     }//for end
 
@@ -192,5 +192,3 @@ void Player::start_() {
 void Player::setRenderCallback(RenderCallback renderCallback) {
     this->renderCallback = renderCallback;
 }
-
-

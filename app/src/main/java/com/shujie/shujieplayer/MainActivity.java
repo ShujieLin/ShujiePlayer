@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Player player;
     private static final String TAG = "MainActivity";
+    private SurfaceView surfaceView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,10 +38,11 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(binding.getRoot());
-
+        surfaceView = binding.surfaceView;
         requestPermisson();
 
         player = new Player();//  /storage/emulated/0/demo.mp4
+        player.setSurfaceView(surfaceView);
         player.setDataSource(new File(Environment.getExternalStorageDirectory()  + File.separator + "demo.mp4").getAbsolutePath());
         Log.d(TAG, "onCreate: Environment.getExternalStorageDirectory() = " + Environment.getExternalStorageDirectory());
 

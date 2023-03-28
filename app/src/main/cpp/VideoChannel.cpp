@@ -132,14 +132,19 @@ void VideoChannel::video_play() {
                   dst_linesize);
 
         // ANatvieWindows 渲染工作
-      /*  renderCallback(dst_data[0], codecContext->width, codecContext->height, dst_linesize[0]);
-        releaseAVFrame(&avFrame);// 释放原始包，因为已经被渲染完了*/
-    }
+        // SurfaceView ----- ANatvieWindows
+        // 如何渲染一帧图像？
+        // 答：宽，高，数据  ----> 函数指针的声明
 
-    /*releaseAVFrame(&avFrame); // 出现错误，所退出的循环，都要释放frame
-    isPlaying = 0;
-    av_free(dst_data);
-    sws_freeContext(swsContext);*/
+        // 我拿不到Surface，只能回调给 native-lib.cpp
+        renderCallback(dst_data[0], codecContext->width, codecContext->height, dst_linesize[0]);
+        releaseAVFrame(&avFrame); // 释放原始包，因为已经被渲染完了，没用了
+    }
+    //出现错误，所退出的循环，都要释放frame
+    releaseAVFrame(&avFrame);
+    isPlaying =0;
+    av_free(&dst_data[0]);
+    sws_freeContext(swsContext); // free(sws_ctx); FFmpeg必须使用人家的函数释放，直接崩溃
 }
 
 void VideoChannel::setRenderCallback(RenderCallback renderCallback) {

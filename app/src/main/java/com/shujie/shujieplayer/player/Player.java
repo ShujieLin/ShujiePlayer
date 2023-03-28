@@ -1,9 +1,15 @@
 package com.shujie.shujieplayer.player;
 
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+
+import androidx.annotation.NonNull;
+
 /**
  * @author: linshujie
  */
-public class Player {
+public class Player implements SurfaceHolder.Callback  {
     // Used to load the 'shujieplayer' library on application startup.
     static {
         System.loadLibrary("shujieplayer");
@@ -38,6 +44,7 @@ public class Player {
     private String dataSource;
     private OnPreparedListener onPreparedListener;
     private OnErrorListener onErrorListener;
+    private SurfaceHolder surfaceHolder;
 
     public void setDataSource(String absolutePath) {
         this.dataSource = absolutePath;
@@ -82,6 +89,33 @@ public class Player {
      */
     public void release() {
         releaseNative();
+    }
+
+    /**
+     * set SurfaceView
+     * @param surfaceView
+     */
+    public void setSurfaceView(SurfaceView surfaceView) {
+        if (this.surfaceHolder != null) {
+            surfaceHolder.removeCallback(this); // 清除上一次的
+        }
+        surfaceHolder = surfaceView.getHolder();
+        surfaceHolder.addCallback(this); // 监听
+    }
+
+    @Override
+    public void surfaceCreated(@NonNull SurfaceHolder holder) {
+
+    }
+
+    @Override
+    public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+        setSurfaceNative(holder.getSurface());
+    }
+
+    @Override
+    public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+
     }
 
 
@@ -136,4 +170,6 @@ public class Player {
     private native void stopNative();
 
     private native void releaseNative();
+
+    private native void setSurfaceNative(Surface surface);
 }
