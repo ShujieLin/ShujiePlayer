@@ -109,7 +109,7 @@ void VideoChannel::video_play() {
             SWS_BILINEAR,//线性算法，速度不是很快，但是不会损失数据
             NULL, NULL, NULL);//美颜一般不用FFmpeg的过滤，使用OpenCV的
 
-    while (!isPlaying) {
+    while (isPlaying) {
         int ret = frames.getQueueAndDel(avFrame);
         if (!isPlaying) {
             break;
