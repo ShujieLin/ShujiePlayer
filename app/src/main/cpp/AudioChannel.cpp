@@ -65,6 +65,11 @@ void AudioChannel::start() {
 void AudioChannel::audio_decode() {
     AVPacket *pkt = 0;
     while (isPlaying) {
+        if (isPlaying && frames.size() > 100) {
+            av_usleep(10 * 1000); // 单位 ：microseconds 微妙 10毫秒
+            continue;
+        }
+
         int ret = packets.getQueueAndDel(pkt); // 阻塞式函数
         if (!isPlaying) {
             break; // 如果关闭了播放，跳出循环，releaseAVPacket(&pkt);
@@ -91,12 +96,19 @@ void AudioChannel::audio_decode() {
         if (ret == AVERROR(EAGAIN)) {
             continue; // 有可能音频帧，也会获取失败，重新拿一次
         } else if (ret != 0) {
+            if (frame) {
+                releaseAVFrame(&frame);
+            }
             break; // 错误了
         }
         // 重要拿到了 原始包-- PCM数据
         frames.insertToQueue(frame);
+
+        av_packet_unref(pkt); // 减1 = 0 释放成员指向的堆区
+        releaseAVPacket(&pkt); // 释放AVPacket * 本身的堆区空间
     } // while end
-    releaseAVPacket(&pkt);
+    av_packet_unref(pkt); // 减1 = 0 释放成员指向的堆区
+    releaseAVPacket(&pkt); // 释放AVPacket * 本身的堆区空间
 }
 
 /**
@@ -125,7 +137,7 @@ int AudioChannel::getPCM() {
     int pcm_data_size = 0;
     // 获取PCM数据
     // PCM数据在哪里？答：队列 frames队列中  frame->data == PCM数据(待 重采样   32bit)
-    AVFrame *frame = 0;
+    AVFrame *frame = nullptr;
     while (isPlaying) {
         int ret = frames.getQueueAndDel(frame);
         if (!isPlaying) {
@@ -147,7 +159,7 @@ int AudioChannel::getPCM() {
         // pcm的处理逻辑
         // 音频播放器的数据格式是我们自己在下面定义的
         // 而原始数据（待播放的音频pcm数据）
-        // TODO 重采样工作
+        // 重采样工作
         // 返回的结果：每个通道输出的样本数(注意：是转换后的)    做一个简单的重采样实验(通道基本上都是:1024)
         int samples_per_channel = swr_convert(swr_ctx,
                 // 下面是输出区域
@@ -171,12 +183,14 @@ int AudioChannel::getPCM() {
     // FFmpeg录制 Mac 麦克风  输出 每一个音频包的size == 4096
     // 4096是单声道的样本数，  44100是每秒钟采样的数
     // 采样率 和 样本数的关系？
-    // 答： TODO 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096 ==  4096是单声道的样本数
-    //      TODO 采样率 44100是每秒钟采样的次数
+    // 答： 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096 ==  4096是单声道的样本数
+    //     采样率 44100是每秒钟采样的次数
 
     // 样本数 = 采样率 * 声道数 * 位声
 
     // 双声道的样本数？  答： （采样率 * 声道数 * 位声） * 2
+    av_frame_unref(frame); // 减1 = 0 释放成员指向的堆区
+    releaseAVFrame(&frame); // 释放AVFrame * 本身的堆区空间
 
     return pcm_data_size;
 }

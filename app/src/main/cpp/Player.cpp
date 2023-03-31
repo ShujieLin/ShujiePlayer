@@ -190,6 +190,17 @@ void Player::start() {
 void Player::start_() {
     LOGI("thread: put AVPacket start")
     while (isPlaying) {
+        // 解决方案：视频 我不丢弃数据，等待队列中数据 被消费 内存泄漏点1.1
+        if (video_channel && video_channel->packets.size() > 100) {
+            av_usleep(10 * 1000); // 单位 ：microseconds 微妙 10毫秒
+            continue;
+        }
+        // 解决方案：音频 我不丢弃数据，等待队列中数据 被消费 内存泄漏点1.2
+        if (audio_channel && audio_channel->packets.size() > 100) {
+            av_usleep(10 * 1000); // 单位 ：microseconds 微妙 10毫秒
+            continue;
+        }
+
         // AVPacket 可能是音频 也可能是视频（压缩包）
         AVPacket *packet = av_packet_alloc();
         int ret = av_read_frame(formatContext, packet);
@@ -205,11 +216,14 @@ void Player::start_() {
             }
         } else if (ret == AVERROR_EOF) {
             // 表示读完了，要考虑释放播放完成，表示读完了 并不代表播放完毕
+            if (video_channel->packets.empty() && audio_channel->packets.empty()) {
+                break; // 队列的数据被音频 视频 全部播放完毕了，我在退出
+            }
         } else {
             break;// av_read_frame 出现了错误，结束当前循环
         }
     }// end while
-    isPlaying = 0;
+    isPlaying = false;
     video_channel->stop();
     audio_channel->stop();
 }
