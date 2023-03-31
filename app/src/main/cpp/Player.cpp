@@ -48,6 +48,8 @@ void Player::prepare_() {
     * 4，各种设置：例如：Http 连接超时， 打开rtmp的超时  AVDictionary **options
     */
     int r = avformat_open_input(&formatContext, data_source, 0, &dictionary);
+    LOGI("打开媒体地址");
+
     // 释放字典
     av_dict_free(&dictionary);
     if (r) {
@@ -60,6 +62,7 @@ void Player::prepare_() {
 
     // 第二步：查找媒体中的音视频流的信息
     r = avformat_find_stream_info(formatContext, 0);
+    LOGI("查找媒体中的音视频流的信息");
     if (r < 0) {
         //jni反射回调给java方法，并提示
         if (callbackHelper) {
@@ -81,6 +84,14 @@ void Player::prepare_() {
 
         //第六步：（根据上面的【参数】）获取编解码器
         AVCodec *codec = avcodec_find_decoder(parameters->codec_id);
+        if (i == 0){
+            LOGI("Got video AVCodec")
+        } else if(i == 1){
+            LOGI("Got audio AVCodec")
+        } else{
+            LOGI("Unknow AVCodec")
+        }
+
         if (!codec){
             if (callbackHelper){
                 callbackHelper->onError(THREAD_CHILD,FFMPEG_FIND_DECODER_FAIL);
@@ -89,6 +100,7 @@ void Player::prepare_() {
 
         //第七步：编解码器 上下文 （这个才是真正干活的）
         AVCodecContext *codecContext = avcodec_alloc_context3(codec);
+        LOGI("Got AVCodecContext")
         if (!codecContext) {
             //jni反射回调给java方法，并提示
             if (callbackHelper) {
@@ -99,6 +111,8 @@ void Player::prepare_() {
 
         //第八步：他目前是一张白纸（parameters copy codecContext）
         r = avcodec_parameters_to_context(codecContext, parameters);
+        LOGI("avcodec_parameters_to_context ")
+
         if (r < 0) {
             //jni反射回调给java方法，并提示
             if (callbackHelper) {
@@ -109,6 +123,7 @@ void Player::prepare_() {
 
         // 第九步：打开解码器
         r = avcodec_open2(codecContext, codec, 0);
+        LOGI("avcodec_open2")
         if (r) {
             //jni反射回调给java方法，并提示
             if (callbackHelper) {
@@ -120,9 +135,11 @@ void Player::prepare_() {
         //第十步：从编解码器参数中，获取流的类型 codec_type  ===  音频 视频
         if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO) {
             audio_channel = new AudioChannel(i, codecContext);
+            LOGI("new AudioChannel")
         } else if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO) {
             video_channel = new VideoChannel(i, codecContext);
             video_channel->setRenderCallback(renderCallback);
+            LOGI("new VideoChannel")
         }
     }//for end
 
@@ -139,6 +156,7 @@ void Player::prepare_() {
      *  第十二步：准备成功，我们的媒体文件 OK了，通知给上层
      */
     if (callbackHelper) {
+        LOGI("Prepared ok")
         callbackHelper->onPrepared(THREAD_CHILD);
     }
 
@@ -159,12 +177,18 @@ void Player::start() {
         video_channel->start();
     }
 
+    if (audio_channel){
+        audio_channel->start();
+    }
     // 创建子线程 把 音频和视频 压缩包 加入队列里面去
     pthread_create(&pid_start, 0, task_start, this);
+
+
 }
 
 // 把 视频 音频 的压缩包(AVPacket *) 循环获取出来 加入到队列里面去
 void Player::start_() {
+    LOGI("thread: put AVPacket start")
     while (isPlaying) {
         // AVPacket 可能是音频 也可能是视频（压缩包）
         AVPacket *packet = av_packet_alloc();
@@ -177,6 +201,7 @@ void Player::start_() {
                 video_channel->packets.insertToQueue(packet);
             } else if (audio_channel && audio_channel->stream_index == packet->stream_index) {
                 //代表是音频
+                audio_channel->packets.insertToQueue(packet);
             }
         } else if (ret == AVERROR_EOF) {
             // 表示读完了，要考虑释放播放完成，表示读完了 并不代表播放完毕

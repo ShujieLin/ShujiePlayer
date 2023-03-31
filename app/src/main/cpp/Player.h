@@ -36,5 +36,6 @@ public:
     void start_();
 
     void setRenderCallback(RenderCallback renderCallback);
+
 };
 #endif

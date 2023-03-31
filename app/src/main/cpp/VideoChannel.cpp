@@ -12,23 +12,26 @@ VideoChannel::~VideoChannel() {
 
 
 void *task_video_decode(void *args) {
+    LOGI("thread: video decode start")
     auto *video_channel = static_cast<VideoChannel *>(args);
     video_channel->video_decode();
-    return 0;
+    return nullptr;
 }
 
 void *task_video_play(void *args) {
+    LOGI("thread: video play start")
     auto *video_channel = static_cast<VideoChannel *> (args);
     video_channel->video_play();
-    return 0;
+    return nullptr;
 }
 
 // 视频：
 // 1.把队列里面的压缩包(AVPacket *)取出来，然后解码成（AVFrame * ）原始包 ----> 保存队列
 // 2.把队列里面的原始包(AVFrame *)取出来， 播放
 void VideoChannel::start() {
-    isPlaying = 1;
+    isPlaying = true;
 
+    LOGI("VideoChannel::start()");
     packets.setWork(1);
     frames.setWork(1);
 
@@ -44,7 +47,8 @@ void VideoChannel::stop() {
 }
 
 void VideoChannel::video_decode() {
-    AVPacket *pkt = 0;
+    LOGI("video_decode")
+    AVPacket *pkt = nullptr;
     while (isPlaying) {
         int ret = packets.getQueueAndDel(pkt);
         //如果关了，跳出去
@@ -82,6 +86,7 @@ void VideoChannel::video_decode() {
 
 // 第二线线程：视频：从队列取出原始包，播放 【真正干活了】
 void VideoChannel::video_play() {
+    LOGI("video_play")
     // SWS_FAST_BILINEAR == 很快 可能会模糊
     // SWS_BILINEAR 适中算法
     AVFrame *avFrame = 0;
@@ -138,6 +143,7 @@ void VideoChannel::video_play() {
 
         // 我拿不到Surface，只能回调给 native-lib.cpp
         renderCallback(dst_data[0], codecContext->width, codecContext->height, dst_linesize[0]);
+
         releaseAVFrame(&avFrame); // 释放原始包，因为已经被渲染完了，没用了
     }
     //出现错误，所退出的循环，都要释放frame

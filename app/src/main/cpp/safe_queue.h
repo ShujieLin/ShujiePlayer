@@ -3,7 +3,7 @@
 
 #include <queue>
 #include <pthread.h>
-
+#include "log4c.h"
 using namespace std;
 
 template<typename T> // 模版函数：相当于Java泛型：存放任意类型
@@ -35,7 +35,7 @@ public:
      */
     void insertToQueue(T value) {
         pthread_mutex_lock(&mutex); // 多线程的访问（先锁住）
-
+        LOGD( "insertToQueue");
         if (work) {
             // 工作状态
             queue.push(value);
@@ -57,6 +57,7 @@ public:
         int ret = 0; // 默认是false
 
         pthread_mutex_lock(&mutex); // 多线程的访问（先锁住）
+        LOGD("getQueueAndDel");
 
         while (work && queue.empty()) {
             // 如果是工作专题 并且 队列里面没有数据，我就阻塞这这里睡觉
@@ -85,7 +86,6 @@ public:
         pthread_mutex_lock(&mutex); // 多线程的访问（先锁住）
 
         this->work = work;
-
         // 每次设置状态后，就去唤醒下，有没有阻塞睡觉的地方
         pthread_cond_signal(&cond);
 

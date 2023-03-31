@@ -27,6 +27,7 @@ jint JNI_OnLoad(JavaVM *vm, void *args) {
  * @param src_lineSize
  */
 void renderFrame(uint8_t *src_data, int width, int height, int src_lineSize) {
+    LOGD("renderFrame")
     pthread_mutex_lock(&mutex);
     if (!window) {
         pthread_mutex_unlock(&mutex); // 出现了问题后，必须考虑到，释放锁，怕出现死锁问题
@@ -134,5 +135,6 @@ Java_com_shujie_shujieplayer_player_Player_setSurfaceNative(JNIEnv *env, jobject
     }
     // 创建新的窗口用于视频显示
     window = ANativeWindow_fromSurface(env, surface);
+    LOGI("get window from android.")
     pthread_mutex_unlock(&mutex);
 }

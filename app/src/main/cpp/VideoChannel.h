@@ -1,6 +1,7 @@
 #ifndef VIDEO_CHANNEL_H
 #define VIDEO_CHANNEL_H
 
+
 #include "BaseChannel.h"
 
 extern "C" {

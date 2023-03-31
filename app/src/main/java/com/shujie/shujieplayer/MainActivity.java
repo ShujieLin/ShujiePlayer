@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         surfaceView = binding.surfaceView;
         requestPermisson();
 
+//       /storage/emulated/0/demo.mp4
         player = new Player();//  /storage/emulated/0/demo.mp4
         player.setSurfaceView(surfaceView);
         player.setDataSource(new File(Environment.getExternalStorageDirectory()  + File.separator + "demo.mp4").getAbsolutePath());
